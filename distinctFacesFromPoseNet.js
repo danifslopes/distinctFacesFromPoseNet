@@ -43,7 +43,7 @@ class Face {
 
         meanPos.div(faceParts.length);
 
-        return {center: meanPos, width: faceWidth * 1.5}
+        return {center: meanPos, width: faceWidth }
     }
 
     drawDebug() {
@@ -98,11 +98,11 @@ function cleanRepeatedPoses() {
 
     for (let i = 0; i < poses.length; i++) for (let j = i + 1; j < poses.length; j++) {
         let f1 = Face.faceCircle(poses[i].pose), f2 = Face.faceCircle(poses[j].pose);
-        if (dist(f1.center.x, f1.center.y, f2.center.x, f2.center.y) <= max(f1.width, f2.width)) toRemove.push(i);
+        if (dist(f1.center.x, f1.center.y, f2.center.x, f2.center.y) <= (f1.width/2) + (f2.width/2) ) toRemove.push(i);
     }
 
     for (let i of toRemove) poses = poses.splice(i, 1);
-    if (toRemove.length > 0) console.log("Removed overlapping poses:" + toRemove.length);
+    //if (toRemove.length > 0) console.log("Removed overlapping poses:" + toRemove.length);
 }
 
 function detectDistinctFaces(poses) {
