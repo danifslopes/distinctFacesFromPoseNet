@@ -12,22 +12,38 @@ let faceList = [], faceCount = 0;
 class Face {
     constructor(newID, pose) {
         this.update(pose);
+        this.justGotReady = false;
+        this.readyToUse = false;
         this.available = true; // Am I available to be matched?
         this.delete = false; // Should I be deleted?
-        this.lifeTime = 60;
-        this.timer = this.lifeTime; // How long should I live if I have disappeared?
+        this.timeToDie = 60;
+        this.timer = this.timeToDie; // How long should I live if I have disappeared?
+        this.readyToUseTime = 30;
+        this.lifeTime = 0;
         this.id = newID; // Assign a number to each face
+        this.minKeypointConfidence = 0; //0.2;
+    }
+
+    static onNewFaceDetected(f) { //fires once if a face is created. returns the dead face as a param
+
+    }
+
+    static onFaceDead(f) { //fires if a face dies. returns the dead face as a param
+
+    }
+
+    onDead() { //to override if you want a specific face  to fire  a specific  thing when  it dies
+
     }
 
     static faceCircle(pose) {
         let faceParts = ["nose", "leftEar", "rightEar", "leftEye", "rightEye"],
-            faceWidth = Number.NEGATIVE_INFINITY;
+            faceWidth = Number.NEGATIVE_INFINITY, v, v2, meanPos = createVector(0, 0);
 
-        let v, v2;
-
-        let meanPos = createVector(0, 0);
         for (let i = 0; i < faceParts.length; i++) {
             let p = pose[faceParts[i]];
+            if (p.confidence <= this.minKeypointConfidence) continue;
+
             v = createVector(p.x, p.y);
 
             meanPos.add(v);
@@ -43,7 +59,7 @@ class Face {
 
         meanPos.div(faceParts.length);
 
-        return {center: meanPos, width: faceWidth }
+        return {center: meanPos, width: faceWidth}
     }
 
     drawDebug() {
@@ -51,7 +67,7 @@ class Face {
         stroke(1);
         ellipse(this.center.x, this.center.y, this.width, this.width)
 
-        fill(255, map(this.timer, this.lifeTime, 0, 255, 0));
+        fill(255, map(this.timer, this.timeToDie, 0, 255, 0));
         text("id: " + this.id, this.center.x + 10, this.center.y);
         text("timer: " + this.timer, this.center.x + 10, this.center.y + 15);
 
@@ -60,7 +76,7 @@ class Face {
 
     update(newPose) {
         this.pose = newPose.pose;
-        this.timer = this.lifeTime;
+        this.timer = this.timeToDie;
         let fc = Face.faceCircle(this.pose);
         this.center = fc.center;
         this.width = fc.width;
@@ -70,6 +86,18 @@ class Face {
             width: this.width,
             height: this.width
         };
+        this.lifeTime++;
+
+        let pReadyToUse = this.readyToUse;
+        if (this.lifeTime > this.readyToUseTime) this.readyToUse = true;
+        if (pReadyToUse !== this.readyToUse) {
+            this.justGotReady = true;
+            console.log("new face: " + this.id);
+            Face.onNewFaceDetected(this);
+        } else {
+            this.justGotReady = false;
+        }
+
     }
 
     countDown() {
@@ -83,7 +111,7 @@ class Face {
     drawKeyPoints() {
         for (let j = 0; j < this.pose.keypoints.length; j++) {
             let keypoint = this.pose.keypoints[j];
-            if (keypoint.score > 0.2) {
+            if (keypoint.score > this.minKeypointConfidence) {
                 fill(255, 0, 0);
                 noStroke();
                 ellipse(keypoint.position.x, keypoint.position.y, 10, 10);
@@ -96,13 +124,22 @@ class Face {
 function cleanRepeatedPoses() {
     let toRemove = [];
 
-    for (let i = 0; i < poses.length; i++) for (let j = i + 1; j < poses.length; j++) {
-        let f1 = Face.faceCircle(poses[i].pose), f2 = Face.faceCircle(poses[j].pose);
-        if (dist(f1.center.x, f1.center.y, f2.center.x, f2.center.y) <= (f1.width/2) + (f2.width/2) ) toRemove.push(i);
+    for (let i = 0; i < poses.length; i++) {
+        if (poses[i].pose.score < 0.3) toRemove.push(poses[i]);
+        continue;
+
+        let f1 = Face.faceCircle(poses[i].pose);
+
+        for (let j = i + 1; j < poses.length; j++) {
+            let f2 = Face.faceCircle(poses[j].pose);
+            if (dist(f1.center.x, f1.center.y, f2.center.x, f2.center.y) <= max(f1.width / 2, f2.width / 2)) toRemove.push(poses[i]);
+        }
     }
 
-    for (let i of toRemove) poses = poses.splice(i, 1);
-    //if (toRemove.length > 0) console.log("Removed overlapping poses:" + toRemove.length);
+    //delete remaining
+    for (let i of toRemove) {
+        poses.splice(poses.indexOf(toRemove[i]), 1);
+    }
 }
 
 function detectDistinctFaces(poses) {
@@ -114,7 +151,7 @@ function detectDistinctFaces(poses) {
     if (faceList.length <= 0) {
         // Just make a Face object for every face Rectangle
         for (let i = 0; i < poses.length; i++) {
-            print("+++ New face detected with ID: " + faceCount);
+            //print("+++ New face detected with ID: " + faceCount);
             faceList.push(new Face(faceCount, poses[i]));
             faceCount++;
         }
@@ -145,14 +182,14 @@ function detectDistinctFaces(poses) {
         // Add any unused poses
         for (let i = 0; i < poses.length; i++) {
             if (!used[i]) {
-                print("+++ New face detected with ID: " + faceCount);
+                //print("+++ New face detected with ID: " + faceCount);
                 faceList.push(new Face(faceCount, poses[i]));
                 faceCount++;
             }
         }
 
         // SCENARIO 3
-        // We have more Face objects than face detections found
+        // We have more objects than face detections
     } else {
         // All Face objects start out as available
         for (let f of faceList) f.available = true;
@@ -184,6 +221,10 @@ function detectDistinctFaces(poses) {
             if (f.available) {
                 f.countDown();
                 if (f.dead()) {
+                    if (f.readyToUse) {
+                        Face.onFaceDead(f);
+                        f.onDead();
+                    }
                     f.delete = true;
                 }
             }
@@ -196,5 +237,5 @@ function detectDistinctFaces(poses) {
         if (f.delete) faceList.splice(i, 1);
     }
 
-    return faceList;
+    return faceList.filter(f => f.readyToUse);
 }
