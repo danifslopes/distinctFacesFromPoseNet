@@ -28,6 +28,10 @@ Face.onFaceDead = function (f) {
 }
 
 function draw() {
+    //flip cam:
+    //translate(width, 0);
+    //scale(-1, 1);
+    
     image(video, 0, 0, width, height);
 
     let faces = detectDistinctFaces(poses);
@@ -38,7 +42,7 @@ function draw() {
         //let width = f.width //face width
         //let r = f.r //rectangle around the face
 
-        f.drawDebug(); //debug lines, keypoints points and info
+        f.drawDebug(/*if fliping cam, make this param true*/); //debug lines, keypoints points and info
     }
 }
 
