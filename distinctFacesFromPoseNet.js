@@ -62,14 +62,22 @@ class Face {
         return {center: meanPos, width: faceWidth}
     }
 
-    drawDebug() {
+    drawDebug(flipText = false) {
         noFill();
         stroke(1);
         ellipse(this.center.x, this.center.y, this.width, this.width)
 
         fill(255, map(this.timer, this.timeToDie, 0, 255, 0));
+        
+        push();
+        if (flipText) {
+            translate(this.center.x, 0);
+            scale(-1, 1);
+            translate(-this.center.x, 0);
+        }
         text("id: " + this.id, this.center.x + 10, this.center.y);
         text("timer: " + this.timer, this.center.x + 10, this.center.y + 15);
+        pop();
 
         this.drawKeyPoints();
     }
