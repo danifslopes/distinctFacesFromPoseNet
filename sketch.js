@@ -15,6 +15,18 @@ function modelReady() {
     select("#status").html("Model Loaded");
 }
 
+Face.onNewFaceDetected = function (f) {
+    //do something once, when a new face is first detected
+    
+    
+    //a way  of setting different actions to different Faces:
+    /*if(face is some face you want) f.onDead = function() { //something you wish to do} */
+}
+
+Face.onFaceDead = function (f) {
+    //do something once, when a face disapears
+}
+
 function draw() {
     image(video, 0, 0, width, height);
 
