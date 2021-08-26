@@ -19,7 +19,7 @@ Face.onNewFaceDetected = function (f) {
     //do something once, when a new face is first detected
     
     
-    //a way  of setting different actions to different Faces:
+    //set different actions to different Faces once here:
     /*if(face is some face you want) f.onDead = function() { //something you wish to do} */
 }
 
